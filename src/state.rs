@@ -1,4 +1,4 @@
-use alloy_primitives::{keccak256, Address, U256};
+use alloy_primitives::{Address, U256};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -178,11 +178,6 @@ impl StateDB for InMemoryStateDB {
     }
 }
 
-pub struct State {
-    pub accounts: HashMap<Address, Account>,
-    pub storage: HashMap<U256, U256>,
-}
-
 #[derive(Clone)]
 pub struct Account {
     pub balance: U256,
@@ -211,60 +206,5 @@ impl Account {
             code_hash: U256::ZERO,
             address,
         }
-    }
-}
-
-impl State {
-    pub fn new() -> Self {
-        State {
-            accounts: HashMap::new(),
-            storage: HashMap::new(),
-        }
-    }
-
-    pub fn balance(&self, addr: Address) -> U256 {
-        self.accounts
-            .get(&addr)
-            .map(|account| account.balance)
-            .unwrap_or(U256::ZERO)
-    }
-
-    pub fn store(&mut self, key: U256, value: U256) {
-        self.storage.insert(key, value);
-    }
-
-    pub fn load(&self, key: U256) -> U256 {
-        self.storage.get(&key).unwrap_or(&U256::ZERO).clone()
-    }
-
-    pub fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError> {
-        match self.accounts.get_mut(&from) {
-            Some(from_account) => {
-                if from_account.balance < value {
-                    return Err(EVMError::InsufficientBalance);
-                }
-                from_account.balance -= value;
-            }
-            None => return Err(EVMError::InsufficientBalance),
-        }
-
-        let to_account = self
-            .accounts
-            .entry(to)
-            .or_insert(Account::new_with_address(to));
-        to_account.balance += value;
-        Ok(())
-    }
-
-    pub fn create(&mut self, sender: Address, code: Vec<u8>) -> Address {
-        let account = self.accounts.get(&sender).unwrap();
-        let nonce = account.nonce;
-        let contract_address = sender.create(nonce);
-
-        let mut contract = Account::new();
-        contract.address = contract_address;
-        contract.code = code;
-        self.accounts.insert(contract_address, contract);
-        contract_address
     }
 }

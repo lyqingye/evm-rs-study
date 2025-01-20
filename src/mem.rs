@@ -1,3 +1,5 @@
+use core::alloc;
+
 use alloy_primitives::U256;
 
 const MEMORY_SIZE: usize = 1024 * 1024 * 16;

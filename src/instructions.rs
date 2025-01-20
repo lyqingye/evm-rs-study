@@ -5,7 +5,6 @@ use crate::{
     error::EVMError,
     i256::{i256_cmp, i256_div, i256_mod},
     opcode::JUMPDEST,
-    opcode_table::InstFn,
     state::StateDB,
 };
 use alloy_primitives::{Address, FixedBytes, U256};
@@ -862,7 +861,7 @@ pub fn push<const N: usize>(
     _state: &mut Box<dyn StateDB>,
     _blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let value = ctx.code[ctx.pc + 1..ctx.pc + N + 1].to_vec();
+    let value = ctx.code[(ctx.pc + 1)..(ctx.pc + 1 + N)].to_vec();
     ctx.stack.push(U256::from_be_slice(&value));
     Ok(())
 }

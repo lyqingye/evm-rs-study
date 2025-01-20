@@ -1,8 +1,9 @@
+#![allow(unused)]
+
 use alloy_primitives::{Address, U256};
 use context::BlockContext;
 use state::{InMemoryStateDB, StateDB};
 use vm::Interpreter;
-
 mod context;
 mod error;
 mod i256;

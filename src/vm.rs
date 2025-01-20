@@ -43,7 +43,8 @@ impl Interpreter {
                     match opcode {
                         PUSH1..=PUSH32 => {
                             let operand_size = (opcode - PUSH1 + 1) as usize;
-                            let operand = ctx.code[ctx.pc..ctx.pc + operand_size].to_vec();
+                            let operand =
+                                ctx.code[(ctx.pc + 1)..(ctx.pc + 1 + operand_size)].to_vec();
                             println!("{} 0x{}", opcode_name, hex::encode(operand));
                         }
                         _ => {

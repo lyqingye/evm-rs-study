@@ -1,9 +1,5 @@
-use crate::i256::{i256_cmp, i256_div, i256_mod};
-use crate::state::{Account, State};
 use crate::{mem::Memory, stack::Stack};
-use alloy_primitives::{Address, FixedBytes, U256};
-use core::panic;
-use std::cmp::{min, Ordering};
+use alloy_primitives::{Address, U256};
 
 pub struct Context {
     pub stack: Stack,
