@@ -1,8 +1,6 @@
-use core::alloc;
-
 use alloy_primitives::U256;
 
-const MEMORY_SIZE: usize = 1024 * 1024 * 16;
+const MEMORY_SIZE: usize = 1024;
 
 pub struct Memory {
     pub memory: Vec<u8>,
@@ -13,25 +11,34 @@ impl Memory {
         let mut mem = Memory {
             memory: Vec::with_capacity(MEMORY_SIZE),
         };
-        mem.memory.resize(MEMORY_SIZE, 0);
         mem
     }
 
+    fn ensure_capacity(&mut self, offset: usize, size: usize) {
+        if offset + size > self.memory.len() {
+            self.memory.resize(offset + size, 0);
+        }
+    }
+
     pub fn write32(&mut self, offset: usize, value: U256) {
+        self.ensure_capacity(offset, 32);
         self.memory[offset..offset + 32].copy_from_slice(value.to_be_bytes_vec().as_slice());
     }
 
     pub fn write8(&mut self, offset: usize, value: u8) {
+        self.ensure_capacity(offset, 1);
         self.memory[offset] = value;
     }
 
     pub fn write(&mut self, offset: usize, value: &[u8]) {
         if value.len() > 0 {
+            self.ensure_capacity(offset, value.len());
             self.memory[offset..offset + value.len()].copy_from_slice(value);
         }
     }
 
     pub fn fill(&mut self, offset: usize, value: u8, size: usize) {
+        self.ensure_capacity(offset, size);
         self.memory[offset..offset + size].fill(value);
     }
 
