@@ -6,9 +6,18 @@ use crate::{
     i256::{i256_cmp, i256_div, i256_mod},
     opcode::JUMPDEST,
     state::StateDB,
+    u256,
 };
-use alloy_primitives::{Address, FixedBytes, U256};
+use alloy_primitives::U256;
 use anyhow::Result;
+
+pub fn nop(
+    ctx: &mut Context,
+    state: &mut Box<dyn StateDB>,
+    blk_ctx: &BlockContext,
+) -> Result<(), EVMError> {
+    Ok(())
+}
 
 pub fn stop(
     ctx: &mut Context,
@@ -352,7 +361,9 @@ pub fn keccak256(
         ctx.stack.push(U256::ZERO);
         return Ok(());
     }
-    let data = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+    let data = ctx
+        .memory
+        .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
     let hash = alloy_primitives::keccak256(data);
     ctx.stack.push(hash.into());
     Ok(())
@@ -373,7 +384,8 @@ pub fn balance(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let address = ctx.stack.pop();
-    ctx.stack.push(state.get_balance(u256_to_address(address)));
+    ctx.stack
+        .push(state.get_balance(u256::u256_to_address(address)));
     Ok(())
 }
 
@@ -409,9 +421,13 @@ pub fn call_data_load(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
+    if ctx.call_data.is_empty() {
+        ctx.stack.push(U256::ZERO);
+        return Ok(());
+    }
     let offset = ctx.stack.pop();
     let mut loaded = [0u8; 32];
-    let start_offset = min(u256_to_usize(offset), ctx.call_data.len() - 1);
+    let start_offset = min(u256::u256_to_usize(offset), ctx.call_data.len() - 1);
     let copy_size = min(32usize, ctx.call_data.len() - start_offset);
     for i in 0..copy_size {
         loaded[i] = ctx.call_data[start_offset + i];
@@ -439,16 +455,19 @@ pub fn call_data_copy(
     let size = ctx.stack.pop();
 
     let copy_size = min(
-        u256_to_usize(size),
-        ctx.call_data.len() - u256_to_usize(offset),
+        u256::u256_to_usize(size),
+        ctx.call_data.len() - u256::u256_to_usize(offset),
     );
-    let start_offset = u256_to_usize(offset);
+    let start_offset = u256::u256_to_usize(offset);
     if start_offset >= ctx.call_data.len() {
-        ctx.memory
-            .fill(u256_to_usize(dst_offset), 0, u256_to_usize(size));
+        ctx.memory.fill(
+            u256::u256_to_usize(dst_offset),
+            0,
+            u256::u256_to_usize(size),
+        );
     } else {
         ctx.memory.write(
-            u256_to_usize(dst_offset),
+            u256::u256_to_usize(dst_offset),
             &ctx.call_data[start_offset..start_offset + copy_size],
         );
     }
@@ -472,14 +491,20 @@ pub fn code_copy(
     let dst_offset = ctx.stack.pop();
     let offset = ctx.stack.pop();
     let size = ctx.stack.pop();
-    let copy_size = min(u256_to_usize(size), ctx.code.len() - u256_to_usize(offset));
-    let start_offset = u256_to_usize(offset);
+    let copy_size = min(
+        u256::u256_to_usize(size),
+        ctx.code.len() - u256::u256_to_usize(offset),
+    );
+    let start_offset = u256::u256_to_usize(offset);
     if start_offset >= ctx.code.len() {
-        ctx.memory
-            .fill(u256_to_usize(dst_offset), 0, u256_to_usize(size));
+        ctx.memory.fill(
+            u256::u256_to_usize(dst_offset),
+            0,
+            u256::u256_to_usize(size),
+        );
     } else {
         ctx.memory.write(
-            u256_to_usize(dst_offset),
+            u256::u256_to_usize(dst_offset),
             &ctx.code[start_offset..start_offset + copy_size],
         );
     }
@@ -501,8 +526,9 @@ pub fn ext_code_size(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let address = ctx.stack.pop();
-    ctx.stack
-        .push(U256::from(state.get_code_size(u256_to_address(address))));
+    ctx.stack.push(U256::from(
+        state.get_code_size(u256::u256_to_address(address)),
+    ));
     Ok(())
 }
 
@@ -516,15 +542,18 @@ pub fn ext_code_copy(
     let offset = ctx.stack.pop();
     let size = ctx.stack.pop();
 
-    let code = state.get_code(u256_to_address(address));
-    let copy_size = min(u256_to_usize(size), code.len());
-    let start_offset = u256_to_usize(offset);
+    let code = state.get_code(u256::u256_to_address(address));
+    let copy_size = min(u256::u256_to_usize(size), code.len());
+    let start_offset = u256::u256_to_usize(offset);
     if start_offset >= code.len() {
-        ctx.memory
-            .fill(u256_to_usize(dst_offset), 0, u256_to_usize(size));
+        ctx.memory.fill(
+            u256::u256_to_usize(dst_offset),
+            0,
+            u256::u256_to_usize(size),
+        );
     } else {
         ctx.memory.write(
-            u256_to_usize(dst_offset),
+            u256::u256_to_usize(dst_offset),
             &code[start_offset..start_offset + copy_size],
         );
     }
@@ -550,16 +579,19 @@ pub fn return_data_copy(
     let size = ctx.stack.pop();
 
     let copy_size = min(
-        u256_to_usize(size),
-        ctx.return_data.len() - u256_to_usize(offset),
+        u256::u256_to_usize(size),
+        ctx.return_data.len() - u256::u256_to_usize(offset),
     );
-    let start_offset = u256_to_usize(offset);
+    let start_offset = u256::u256_to_usize(offset);
     if start_offset >= ctx.return_data.len() {
-        ctx.memory
-            .fill(u256_to_usize(dst_offset), 0, u256_to_usize(size));
+        ctx.memory.fill(
+            u256::u256_to_usize(dst_offset),
+            0,
+            u256::u256_to_usize(size),
+        );
     } else {
         ctx.memory.write(
-            u256_to_usize(dst_offset),
+            u256::u256_to_usize(dst_offset),
             &ctx.return_data[start_offset..start_offset + copy_size],
         );
     }
@@ -573,7 +605,7 @@ pub fn ext_code_hash(
 ) -> Result<(), EVMError> {
     let address = ctx.stack.pop();
     ctx.stack
-        .push(state.get_code_hash(u256_to_address(address)).into());
+        .push(state.get_code_hash(u256::u256_to_address(address)).into());
     Ok(())
 }
 
@@ -675,8 +707,7 @@ pub fn blob_hash_fee(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    // TODO implement blobhashfee
-    ctx.stack.push(U256::ZERO);
+    ctx.stack.push(blk_ctx.block_hash_fee);
     Ok(())
 }
 
@@ -695,7 +726,8 @@ pub fn mload(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let offset = ctx.stack.pop();
-    ctx.stack.push(ctx.memory.read32(u256_to_usize(offset)));
+    ctx.stack
+        .push(ctx.memory.read32(u256::u256_to_usize(offset)));
     Ok(())
 }
 
@@ -706,7 +738,7 @@ pub fn mstore(
 ) -> Result<(), EVMError> {
     let offset = ctx.stack.pop();
     let value = ctx.stack.pop();
-    ctx.memory.write32(u256_to_usize(offset), value);
+    ctx.memory.write32(u256::u256_to_usize(offset), value);
     Ok(())
 }
 
@@ -718,7 +750,7 @@ pub fn mstore8(
     let offset = ctx.stack.pop();
     let value = ctx.stack.pop();
     ctx.memory
-        .write8(u256_to_usize(offset), value.as_limbs()[0] as u8);
+        .write8(u256::u256_to_usize(offset), value.as_limbs()[0] as u8);
     Ok(())
 }
 
@@ -749,7 +781,7 @@ pub fn jump(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let counter = ctx.stack.pop();
-    ctx.pc = u256_to_usize(counter);
+    ctx.pc = u256::u256_to_usize(counter);
     let next_code = ctx.code[ctx.pc + 1];
     if next_code != JUMPDEST {
         return Err(EVMError::InvalidJumpDestination);
@@ -765,7 +797,7 @@ pub fn jumpi(
     let counter = ctx.stack.pop();
     let condition = ctx.stack.pop();
     if !condition.is_zero() {
-        ctx.pc = u256_to_usize(counter);
+        ctx.pc = u256::u256_to_usize(counter);
     }
     Ok(())
 }
@@ -840,9 +872,9 @@ pub fn mcopy(
     let offset = ctx.stack.pop();
     let size = ctx.stack.pop();
     ctx.memory.copy(
-        u256_to_usize(dst_offset),
-        u256_to_usize(offset),
-        u256_to_usize(size),
+        u256::u256_to_usize(dst_offset),
+        u256::u256_to_usize(offset),
+        u256::u256_to_usize(size),
     );
     Ok(())
 }
@@ -896,65 +928,11 @@ pub fn log<const N: usize>(
         topics.push(ctx.stack.pop());
     }
 
-    let data = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+    let data = ctx
+        .memory
+        .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
 
     // TODO log
-    Ok(())
-}
-
-pub fn create(
-    ctx: &mut Context,
-    state: &mut Box<dyn StateDB>,
-    blk_ctx: &BlockContext,
-) -> Result<(), EVMError> {
-    let value = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
-    let code = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
-    let contract_address = state.create_contract(ctx.contract, code);
-    if !value.is_zero() {
-        state
-            .transfer(ctx.contract, contract_address, value)
-            .unwrap();
-    }
-    ctx.stack.push(contract_address.into_word().into());
-    Ok(())
-}
-
-pub fn call(
-    ctx: &mut Context,
-    state: &mut Box<dyn StateDB>,
-    blk_ctx: &BlockContext,
-) -> Result<(), EVMError> {
-    // TODO 往后处理gas
-    let gas = ctx.stack.pop();
-
-    let address = ctx.stack.pop();
-    let value = ctx.stack.pop();
-    let args_offset = ctx.stack.pop();
-    let args_size = ctx.stack.pop();
-    let ret_offset = ctx.stack.pop();
-    let ret_size = ctx.stack.pop();
-
-    // TODO 这里处理失败的情况, 这里默认成功
-    ctx.stack.push(U256::from(1));
-    Ok(())
-}
-
-pub fn delegate_call(
-    ctx: &mut Context,
-    state: &mut Box<dyn StateDB>,
-    blk_ctx: &BlockContext,
-) -> Result<(), EVMError> {
-    let gas = ctx.stack.pop();
-    let address = ctx.stack.pop();
-    let args_offset = ctx.stack.pop();
-    let args_size = ctx.stack.pop();
-    let ret_offset = ctx.stack.pop();
-    let ret_size = ctx.stack.pop();
-
-    // TODO 这里处理失败的情况, 这里默认成功
-    ctx.stack.push(U256::from(1));
     Ok(())
 }
 
@@ -965,7 +943,9 @@ pub fn ret(
 ) -> Result<(), EVMError> {
     let offset = ctx.stack.pop();
     let size = ctx.stack.pop();
-    ctx.return_data = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+    ctx.return_data = ctx
+        .memory
+        .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
     Err(EVMError::Stop)
 }
 
@@ -976,7 +956,9 @@ pub fn revert(
 ) -> Result<(), EVMError> {
     let offset = ctx.stack.pop();
     let size = ctx.stack.pop();
-    let err_data = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+    let err_data = ctx
+        .memory
+        .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
     ctx.return_data = err_data;
     Err(EVMError::Revert)
 }
@@ -986,18 +968,5 @@ pub fn invalid(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    Err(EVMError::Stop)
-}
-
-fn u256_to_usize(value: U256) -> usize {
-    let limbs = value.as_limbs();
-    if limbs[1] == 0 && limbs[2] == 0 && limbs[3] == 0 {
-        limbs[0] as usize
-    } else {
-        usize::MAX
-    }
-}
-
-fn u256_to_address(value: U256) -> Address {
-    Address::from_word(FixedBytes(value.to_be_bytes()))
+    Err(EVMError::Revert)
 }

@@ -12,6 +12,7 @@ pub struct Context {
     pub call_data: Vec<u8>,
     pub return_data: Vec<u8>,
     pub value: U256,
+    pub depth: usize,
 }
 
 impl Context {
@@ -27,6 +28,7 @@ impl Context {
             call_data: Vec::new(),
             return_data: Vec::new(),
             value: U256::ZERO,
+            depth: 0,
         }
     }
 }
@@ -39,6 +41,7 @@ pub struct BlockContext {
     pub block_difficulty: U256,
     pub block_gas_limit: U256,
     pub block_base_fee: U256,
+    pub block_hash_fee: U256,
     pub gas_price: U256,
     pub base_fee: U256,
 }
@@ -52,6 +55,7 @@ impl BlockContext {
             block_difficulty: U256::ZERO,
             block_gas_limit: U256::ZERO,
             block_base_fee: U256::ZERO,
+            block_hash_fee: U256::ZERO,
             gas_price: U256::ZERO,
             base_fee: U256::ZERO,
             chain_id: U256::ZERO,

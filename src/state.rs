@@ -1,4 +1,4 @@
-use alloy_primitives::{Address, U256};
+use alloy_primitives::{keccak256, Address, U256};
 use anyhow::Result;
 use std::collections::HashMap;
 
@@ -8,9 +8,11 @@ pub trait StateDB {
     // account
     fn create_account(&mut self, address: Address);
     fn create_contract(&mut self, caller: Address, code: Vec<u8>) -> Address;
-    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError>;
+    fn set_code(&mut self, cotnract: Address, code: Vec<u8>);
+
     // balance
-    fn sub_balance(&mut self, address: Address, value: U256) -> U256;
+    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError>;
+    fn sub_balance(&mut self, address: Address, value: U256) -> Result<U256, EVMError>;
     fn add_balance(&mut self, address: Address, value: U256) -> U256;
     fn get_balance(&self, address: Address) -> U256;
 
@@ -36,7 +38,9 @@ pub trait StateDB {
 pub struct InMemoryStateDB {
     accounts: HashMap<Address, Account>,
     storage: HashMap<(Address, U256), U256>,
+
     dirty_storage: HashMap<(Address, U256), U256>,
+    dirty_accounts: HashMap<Address, Account>,
 }
 
 impl InMemoryStateDB {
@@ -45,111 +49,146 @@ impl InMemoryStateDB {
             accounts: HashMap::new(),
             storage: HashMap::new(),
             dirty_storage: HashMap::new(),
+            dirty_accounts: HashMap::new(),
         }
+    }
+}
+
+impl InMemoryStateDB {
+    fn get_account(&self, address: &Address) -> Option<Account> {
+        match self.dirty_accounts.get(address) {
+            Some(account) => Some(account.clone()),
+            None => self.accounts.get(address).cloned(),
+        }
+    }
+
+    fn get_account_mut(&mut self, address: &Address) -> Option<&mut Account> {
+        match self.dirty_accounts.get_mut(address) {
+            Some(account) => Some(account),
+            None => self.accounts.get_mut(address),
+        }
+    }
+
+    fn get_account_mut_or_create(&mut self, address: &Address) -> &mut Account {
+        match self.get_account(address) {
+            Some(account) => self.get_account_mut(address).unwrap(),
+            None => {
+                let account = Account::new_with_address(address.clone());
+                self.set_account(address.clone(), account);
+                self.get_account_mut(address).unwrap()
+            }
+        }
+    }
+
+    fn set_account(&mut self, address: Address, account: Account) {
+        self.dirty_accounts.insert(address, account);
     }
 }
 
 impl StateDB for InMemoryStateDB {
     fn create_account(&mut self, address: Address) {
-        self.accounts
-            .insert(address, Account::new_with_address(address));
+        self.set_account(address, Account::new_with_address(address));
     }
 
     fn create_contract(&mut self, caller: Address, code: Vec<u8>) -> Address {
-        let account = self.accounts.get(&caller).unwrap();
+        let account = self.get_account(&caller).unwrap();
         let nonce = account.nonce;
         let contract_address = caller.create(nonce);
 
         let mut contract = Account::new();
         contract.address = contract_address;
         contract.code = code;
-        self.accounts.insert(contract_address, contract);
+
+        self.set_account(contract_address, contract);
         contract_address
     }
 
-    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError> {
-        match self.accounts.get_mut(&from) {
-            Some(from_account) => {
-                if from_account.balance < value {
-                    return Err(EVMError::InsufficientBalance);
-                }
-                from_account.balance -= value;
+    fn set_code(&mut self, cotnract: Address, code: Vec<u8>) {
+        match self.get_account_mut(&cotnract) {
+            Some(account) => {
+                account.code_hash = keccak256(&code).into();
+                account.code = code;
             }
-            None => return Err(EVMError::InsufficientBalance),
+            None => {
+                self.set_account(cotnract, Account::new_with_code(cotnract, code));
+            }
         }
+    }
 
-        let to_account = self
-            .accounts
-            .entry(to)
-            .or_insert(Account::new_with_address(to));
-        to_account.balance += value;
+    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError> {
+        self.sub_balance(from, value)?;
+        self.add_balance(to, value);
         Ok(())
     }
 
-    fn sub_balance(&mut self, address: Address, value: U256) -> U256 {
-        match self.accounts.get_mut(&address) {
+    fn sub_balance(&mut self, address: Address, value: U256) -> Result<U256, EVMError> {
+        match self.get_account_mut(&address) {
             Some(account) => {
                 let balance = account.balance;
+                if balance < value {
+                    return Err(EVMError::InsufficientBalance);
+                }
                 account.balance -= value;
-                balance
+                Ok(balance)
             }
-            None => U256::ZERO,
+            None => {
+                if value.is_zero() {
+                    Ok(U256::ZERO)
+                } else {
+                    Err(EVMError::InsufficientBalance)
+                }
+            }
         }
     }
 
     fn add_balance(&mut self, address: Address, value: U256) -> U256 {
-        match self.accounts.get_mut(&address) {
-            Some(account) => {
-                let balance = account.balance;
-                account.balance += value;
-                balance
-            }
-            None => U256::ZERO,
-        }
+        let account = self.get_account_mut_or_create(&address);
+        let balance = account.balance;
+        account.balance += value;
+        balance
     }
 
     fn get_balance(&self, address: Address) -> U256 {
-        match self.accounts.get(&address) {
+        match self.get_account(&address) {
             Some(account) => account.balance,
             None => U256::ZERO,
         }
     }
 
     fn get_nonce(&self, address: Address) -> u64 {
-        match self.accounts.get(&address) {
+        match self.get_account(&address) {
             Some(account) => account.nonce,
             None => 0,
         }
     }
 
     fn set_nonce(&mut self, address: Address, nonce: u64) {
-        let account = self.accounts.get_mut(&address).unwrap();
-        account.nonce = nonce;
+        self.get_account_mut_or_create(&address).nonce = nonce;
     }
 
     fn get_code(&self, address: Address) -> Vec<u8> {
-        match self.accounts.get(&address) {
+        match self.get_account(&address) {
             Some(account) => account.code.clone(),
             None => Vec::new(),
         }
     }
 
     fn get_code_hash(&self, address: Address) -> U256 {
-        match self.accounts.get(&address) {
+        match self.get_account(&address) {
             Some(account) => account.code_hash,
             None => U256::ZERO,
         }
     }
 
     fn get_code_size(&self, address: Address) -> usize {
-        match self.accounts.get(&address) {
+        match self.get_account(&address) {
             Some(account) => account.code.len(),
             None => 0,
         }
     }
 
     fn exists(&self, address: Address) -> bool {
-        self.accounts.contains_key(&address)
+        self.get_account(&address).is_some()
     }
 
     fn get_state(&self, address: Address, slot: U256) -> U256 {
@@ -167,7 +206,8 @@ impl StateDB for InMemoryStateDB {
     }
 
     fn prepare(&mut self) {
-        self.dirty_storage.clear()
+        self.dirty_storage.clear();
+        self.dirty_accounts.clear();
     }
 
     fn commit(&mut self) {
@@ -175,6 +215,10 @@ impl StateDB for InMemoryStateDB {
             self.storage.insert(slot.clone(), value.clone());
         }
         self.dirty_storage.clear();
+        for (address, account) in self.dirty_accounts.iter() {
+            self.accounts.insert(address.clone(), account.clone());
+        }
+        self.dirty_accounts.clear();
     }
 }
 
@@ -204,6 +248,17 @@ impl Account {
             nonce: 0,
             code: Vec::new(),
             code_hash: U256::ZERO,
+            address,
+        }
+    }
+
+    pub fn new_with_code(address: Address, code: Vec<u8>) -> Self {
+        let code_hash = keccak256(&code).into();
+        Account {
+            balance: U256::ZERO,
+            nonce: 0,
+            code,
+            code_hash,
             address,
         }
     }

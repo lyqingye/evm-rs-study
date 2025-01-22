@@ -1,4 +1,5 @@
 use alloy_primitives::U256;
+use std::cmp::max;
 
 const MEMORY_SIZE: usize = 1024;
 
@@ -37,23 +38,37 @@ impl Memory {
         }
     }
 
+    pub fn write_with_size(&mut self, offset: usize, size: usize, value: &[u8]) {
+        self.ensure_capacity(offset, size);
+        self.memory[offset..offset + size].copy_from_slice(&value[..size]);
+
+        if size > value.len() {
+            for i in offset + value.len()..offset + size {
+                self.memory[i] = 0;
+            }
+        }
+    }
+
     pub fn fill(&mut self, offset: usize, value: u8, size: usize) {
         self.ensure_capacity(offset, size);
         self.memory[offset..offset + size].fill(value);
     }
 
-    pub fn read(&self, offset: usize, size: usize) -> Vec<u8> {
+    pub fn read(&mut self, offset: usize, size: usize) -> Vec<u8> {
         if size == 0 {
             return vec![];
         }
+        self.ensure_capacity(offset, size);
         self.memory[offset..offset + size].to_vec()
     }
 
-    pub fn read32(&self, offset: usize) -> U256 {
+    pub fn read32(&mut self, offset: usize) -> U256 {
+        self.ensure_capacity(offset, 32);
         U256::from_be_slice(&self.memory[offset..offset + 32])
     }
 
     pub fn copy(&mut self, dst_offset: usize, src_offset: usize, size: usize) {
+        self.ensure_capacity(max(src_offset, dst_offset), size);
         let (dst_slice, src_slice) = self.memory.split_at_mut(dst_offset);
         dst_slice[dst_offset..dst_offset + size]
             .copy_from_slice(&src_slice[src_offset..src_offset + size]);

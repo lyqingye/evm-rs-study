@@ -37,6 +37,18 @@ impl Stack {
         self.stack[len - 1] = self.stack[len - n - 1].clone();
         self.stack[len - n - 1] = tmp;
     }
+
+    pub fn print_stack(&self) {
+        println!("{:<10} {:<64}", "Index", "Value");
+        println!("{:-<10} {:-<64}", "", "");
+
+        let len = self.stack.len();
+        let start = if len > 16 { len - 16 } else { 0 };
+
+        for i in (start..len).rev() {
+            println!("{:<10} {:<64x}", len - i, self.stack[i]);
+        }
+    }
 }
 
 #[cfg(test)]

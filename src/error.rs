@@ -12,4 +12,8 @@ pub enum EVMError {
     InvalidOpcode(u8),
     #[error("stop")]
     Stop,
+
+    // Asm Error
+    #[error("invalid asm token {0}")]
+    InvalidAsmToken(String),
 }

@@ -188,16 +188,16 @@ pub static OPCODE_TABLE: Lazy<HashMap<u8, (&str, &str, InstFn)>> = Lazy::new(|| 
         inst!(LOG2, "LOG2", "Log", log::<2>),
         inst!(LOG3, "LOG3", "Log", log::<3>),
         inst!(LOG4, "LOG4", "Log", log::<4>),
-        inst!(CREATE, "CREATE", "Create contract", create),
-        inst!(CALL, "CALL", "Call", call),
-        // inst!(CALLCODE, "CALLCODE", "Call code", call_code),
+        inst!(CREATE, "CREATE", "Create contract", nop),
+        inst!(CALL, "CALL", "Call", nop),
+        inst!(CALLCODE, "CALLCODE", "Call code", nop),
         inst!(RETURN, "RETURN", "Return", ret),
-        inst!(DELEGATECALL, "DELEGATECALL", "Delegate call", delegate_call),
-        // inst!(CREATE2, "CREATE2", "Create contract 2", create2),
-        // inst!(STATICCALL, "STATICCALL", "Static call", static_call),
+        inst!(DELEGATECALL, "DELEGATECALL", "Delegate call", nop),
+        inst!(CREATE2, "CREATE2", "Create contract 2", nop),
+        inst!(STATICCALL, "STATICCALL", "Static call", nop),
         inst!(REVERT, "REVERT", "Revert", revert),
         inst!(INVALID, "INVALID", "Invalid", invalid),
-        // inst!(SELFDESTRUCT, "SELFDESTRUCT", "Self destruct", self_destruct),
+        inst!(SELFDESTRUCT, "SELFDESTRUCT", "Self destruct", nop),
     ];
 
     for &(opcode, name, description, function) in &instructions {
