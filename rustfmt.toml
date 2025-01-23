@@ -1,0 +1,6 @@
+max_width = 70 # 每行的最大宽度
+hard_tabs = false # 使用空格而不是制表符
+tab_spaces = 4 # 每个制表符的空格数
+chain_width = 50
+array_width = 30
+use_small_heuristics = "Default" # 小整数的启发式

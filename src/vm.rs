@@ -1,6 +1,8 @@
 use alloy_primitives::{keccak256, Address, B256, U256};
 
-use crate::opcode::{CALLCODE, CREATE, CREATE2, DELEGATECALL, STATICCALL};
+use crate::opcode::{
+    CALLCODE, CREATE, CREATE2, DELEGATECALL, STATICCALL,
+};
 use crate::u256::u256_to_address;
 use crate::{
     context::{BlockContext, Context},
@@ -16,25 +18,18 @@ pub struct Interpreter<'a> {
     blk_ctx: &'a BlockContext,
 }
 
-macro_rules! stack_pop {
-    ($ctx:ident, $count:expr) => {{
-        // 创建一个向量用于存储弹出的值
-        let mut values: Vec<_> = (0..$count).map(|_| $ctx.stack.pop()).collect();
-        // 将值转化为固定大小的数组，并返回
-        // 注意：这里假设我们有足够的弹出值
-        let result: [_; $count] = values
-            .try_into()
-            .expect("Expected the correct number of elements");
-        result
-    }};
-}
-
 impl<'a> Interpreter<'a> {
-    pub fn new(state: Box<dyn StateDB>, blk_ctx: &'a BlockContext) -> Self {
+    pub fn new(
+        state: Box<dyn StateDB>,
+        blk_ctx: &'a BlockContext,
+    ) -> Self {
         Self { state, blk_ctx }
     }
 
-    pub fn run_with_ctx(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
+    pub fn run_with_ctx(
+        &mut self,
+        ctx: &mut Context,
+    ) -> Result<(), EVMError> {
         loop {
             let opcode = ctx.code[ctx.pc];
             match OPCODE_TABLE.get(&opcode) {
@@ -42,9 +37,11 @@ impl<'a> Interpreter<'a> {
                     // print the instruction
                     match opcode {
                         PUSH1..=PUSH32 => {
-                            let operand_size = (opcode - PUSH1 + 1) as usize;
-                            let operand =
-                                ctx.code[(ctx.pc + 1)..(ctx.pc + 1 + operand_size)].to_vec();
+                            let operand_size =
+                                (opcode - PUSH1 + 1) as usize;
+                            let operand = ctx.code[(ctx.pc + 1)
+                                ..(ctx.pc + 1 + operand_size)]
+                                .to_vec();
                             println!(
                                 "{}{} 0x{}",
                                 " ".repeat(ctx.depth * 4),
@@ -70,7 +67,11 @@ impl<'a> Interpreter<'a> {
                         DELEGATECALL => self.delegate_call(ctx),
                         _ => {
                             // execute the instruction
-                            inst_fn(ctx, &mut self.state, &self.blk_ctx)
+                            inst_fn(
+                                ctx,
+                                &mut self.state,
+                                &self.blk_ctx,
+                            )
                         }
                     };
 
@@ -114,11 +115,13 @@ impl<'a> Interpreter<'a> {
 
     fn call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let [gas, to, value, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<7>();
+        let [gas, to, value, args_offset, args_size, ret_offset, ret_size] =
+            ctx.stack.pop_n::<7>();
 
-        let call_data = ctx
-            .memory
-            .read(u256_to_usize(args_offset), u256_to_usize(args_size));
+        let call_data = ctx.memory.read(
+            u256_to_usize(args_offset),
+            u256_to_usize(args_size),
+        );
 
         let mut new_ctx = Context::new();
         new_ctx.contract = u256_to_address(to);
@@ -129,7 +132,11 @@ impl<'a> Interpreter<'a> {
         new_ctx.depth = ctx.depth + 1;
 
         if !value.is_zero() {
-            match self.state.transfer(ctx.caller, new_ctx.contract, value) {
+            match self.state.transfer(
+                ctx.caller,
+                new_ctx.contract,
+                value,
+            ) {
                 Ok(_) => {}
                 Err(EVMError::InsufficientBalance) => {
                     ctx.stack.push(U256::ZERO);
@@ -165,13 +172,18 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn delegate_call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
+    fn delegate_call(
+        &mut self,
+        ctx: &mut Context,
+    ) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] =
+            ctx.stack.pop_n::<6>();
 
-        let call_data = ctx
-            .memory
-            .read(u256_to_usize(args_offset), u256_to_usize(args_size));
+        let call_data = ctx.memory.read(
+            u256_to_usize(args_offset),
+            u256_to_usize(args_size),
+        );
 
         let mut new_ctx = Context::new();
 
@@ -205,13 +217,18 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn call_code(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
+    fn call_code(
+        &mut self,
+        ctx: &mut Context,
+    ) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] =
+            ctx.stack.pop_n::<6>();
 
-        let call_data = ctx
-            .memory
-            .read(u256_to_usize(args_offset), u256_to_usize(args_size));
+        let call_data = ctx.memory.read(
+            u256_to_usize(args_offset),
+            u256_to_usize(args_size),
+        );
 
         let mut new_ctx = Context::new();
 
@@ -245,12 +262,17 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    fn static_call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
-        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
+    fn static_call(
+        &mut self,
+        ctx: &mut Context,
+    ) -> Result<(), EVMError> {
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] =
+            ctx.stack.pop_n::<6>();
 
-        let call_data = ctx
-            .memory
-            .read(u256_to_usize(args_offset), u256_to_usize(args_size));
+        let call_data = ctx.memory.read(
+            u256_to_usize(args_offset),
+            u256_to_usize(args_size),
+        );
 
         let mut new_ctx = Context::new();
         new_ctx.contract = u256_to_address(to);
@@ -282,34 +304,56 @@ impl<'a> Interpreter<'a> {
 
     fn create(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         let [value, offset, size] = ctx.stack.pop_n::<3>();
-        let code = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+        let code = ctx
+            .memory
+            .read(u256_to_usize(offset), u256_to_usize(size));
 
-        let contract_address = ctx.caller.create(self.state.get_nonce(ctx.caller));
+        let contract_address = ctx
+            .caller
+            .create(self.state.get_nonce(ctx.caller));
 
         if !value.is_zero() {
-            self.state.transfer(ctx.contract, contract_address, value)?;
+            self.state.transfer(
+                ctx.contract,
+                contract_address,
+                value,
+            )?;
         }
 
-        let contract_code = self.init_contract(ctx, contract_address, code)?;
-        self.state.set_code(contract_address, contract_code);
-        ctx.stack.push(contract_address.into_word().into());
+        let contract_code =
+            self.init_contract(ctx, contract_address, code)?;
+        self.state
+            .set_code(contract_address, contract_code);
+        ctx.stack
+            .push(contract_address.into_word().into());
         Ok(())
     }
 
     fn create2(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         let [value, offset, size, salt] = ctx.stack.pop_n::<4>();
 
-        let code = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
+        let code = ctx
+            .memory
+            .read(u256_to_usize(offset), u256_to_usize(size));
         let code_hash = keccak256(&code);
-        let contract_address = ctx.caller.create2(B256::from(salt), B256::from(code_hash));
+        let contract_address = ctx
+            .caller
+            .create2(B256::from(salt), B256::from(code_hash));
 
         if !value.is_zero() {
-            self.state.transfer(ctx.contract, contract_address, value)?;
+            self.state.transfer(
+                ctx.contract,
+                contract_address,
+                value,
+            )?;
         }
 
-        let contract_code = self.init_contract(ctx, contract_address, code)?;
-        self.state.set_code(contract_address, contract_code);
-        ctx.stack.push(contract_address.into_word().into());
+        let contract_code =
+            self.init_contract(ctx, contract_address, code)?;
+        self.state
+            .set_code(contract_address, contract_code);
+        ctx.stack
+            .push(contract_address.into_word().into());
         Ok(())
     }
 
