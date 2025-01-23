@@ -19,6 +19,14 @@ impl Stack {
         self.stack.pop().unwrap()
     }
 
+    pub fn pop_n<const N: usize>(&mut self) -> [U256; N] {
+        let mut values: Vec<_> = (0..N).map(|_| self.pop()).collect();
+        let result: [_; N] = values
+            .try_into()
+            .expect("Expected the correct number of elements");
+        result
+    }
+
     pub fn len(&self) -> usize {
         self.stack.len()
     }

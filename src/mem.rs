@@ -15,6 +15,10 @@ impl Memory {
         mem
     }
 
+    pub fn len(&self) -> usize {
+        self.memory.len()
+    }
+
     fn ensure_capacity(&mut self, offset: usize, size: usize) {
         if offset + size > self.memory.len() {
             self.memory.resize(offset + size, 0);

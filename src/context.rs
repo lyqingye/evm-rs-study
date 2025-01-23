@@ -44,6 +44,7 @@ pub struct BlockContext {
     pub block_hash_fee: U256,
     pub gas_price: U256,
     pub base_fee: U256,
+    pub blob_hash: U256,
 }
 
 impl BlockContext {
@@ -58,7 +59,13 @@ impl BlockContext {
             block_hash_fee: U256::ZERO,
             gas_price: U256::ZERO,
             base_fee: U256::ZERO,
+            blob_hash: U256::ZERO,
             chain_id: U256::ZERO,
         }
+    }
+
+    pub fn get_block_hash(&self, block_number: U256) -> U256 {
+        // TODO implement block hash, 只支持查询最近256个区块的hash
+        U256::ZERO
     }
 }

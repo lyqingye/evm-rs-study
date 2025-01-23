@@ -32,8 +32,7 @@ pub fn add(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.wrapping_add(b));
     Ok(())
 }
@@ -43,8 +42,7 @@ pub fn mul(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.wrapping_mul(b));
     Ok(())
 }
@@ -54,8 +52,7 @@ pub fn sub(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.wrapping_sub(b));
     Ok(())
 }
@@ -65,8 +62,7 @@ pub fn div(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.wrapping_div(b));
     Ok(())
 }
@@ -76,8 +72,7 @@ pub fn sign_div(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a: U256 = ctx.stack.pop();
-    let b: U256 = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(i256_div(a, b));
     Ok(())
 }
@@ -87,8 +82,7 @@ pub fn modulo(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.wrapping_rem(b));
     Ok(())
 }
@@ -98,8 +92,7 @@ pub fn sign_modulo(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(i256_mod(a, b));
     Ok(())
 }
@@ -109,9 +102,7 @@ pub fn add_mod(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
-    let c = ctx.stack.pop();
+    let [a, b, c] = ctx.stack.pop_n::<3>();
     ctx.stack.push(a.wrapping_add(b).wrapping_rem(c));
     Ok(())
 }
@@ -121,9 +112,7 @@ pub fn mul_mod(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
-    let c = ctx.stack.pop();
+    let [a, b, c] = ctx.stack.pop_n::<3>();
     ctx.stack.push(a.wrapping_mul(b).wrapping_rem(c));
     Ok(())
 }
@@ -133,8 +122,7 @@ pub fn exp(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a.pow(b));
     Ok(())
 }
@@ -144,8 +132,7 @@ pub fn sign_extend(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let k = ctx.stack.pop();
-    let x = ctx.stack.pop();
+    let [k, x] = ctx.stack.pop_n::<2>();
 
     if k < U256::from(31) {
         let ext = k.as_limbs()[0];
@@ -165,8 +152,7 @@ pub fn lt(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     if a < b {
         ctx.stack.push(U256::from(1));
     } else {
@@ -180,8 +166,7 @@ pub fn gt(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     if a > b {
         ctx.stack.push(U256::from(1));
     } else {
@@ -195,8 +180,7 @@ pub fn slt(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     match i256_cmp(&a, &b) {
         Ordering::Less => ctx.stack.push(U256::from(1)),
         Ordering::Greater => ctx.stack.push(U256::from(0)),
@@ -210,8 +194,7 @@ pub fn sgt(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     match i256_cmp(&a, &b) {
         Ordering::Less => ctx.stack.push(U256::from(0)),
         Ordering::Greater => ctx.stack.push(U256::from(1)),
@@ -225,8 +208,7 @@ pub fn eq(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     if a == b {
         ctx.stack.push(U256::from(1));
     } else {
@@ -254,8 +236,7 @@ pub fn and(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a & b);
     Ok(())
 }
@@ -265,8 +246,7 @@ pub fn or(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a | b);
     Ok(())
 }
@@ -276,8 +256,7 @@ pub fn xor(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a ^ b);
     Ok(())
 }
@@ -297,8 +276,7 @@ pub fn byte(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let i = ctx.stack.pop();
-    let x = ctx.stack.pop();
+    let [i, x] = ctx.stack.pop_n::<2>();
     if i >= U256::from(32) {
         ctx.stack.push(U256::from(0));
     } else {
@@ -314,8 +292,7 @@ pub fn shl(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a << b);
     Ok(())
 }
@@ -325,8 +302,7 @@ pub fn shr(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let a = ctx.stack.pop();
-    let b = ctx.stack.pop();
+    let [a, b] = ctx.stack.pop_n::<2>();
     ctx.stack.push(a >> b);
     Ok(())
 }
@@ -336,8 +312,7 @@ pub fn sar(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let shift = ctx.stack.pop();
-    let value = ctx.stack.pop();
+    let [shift, value] = ctx.stack.pop_n::<2>();
 
     if shift < U256::from(255) {
         ctx.stack
@@ -355,8 +330,7 @@ pub fn keccak256(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [offset, size] = ctx.stack.pop_n::<2>();
     if size == U256::ZERO {
         ctx.stack.push(U256::ZERO);
         return Ok(());
@@ -450,9 +424,7 @@ pub fn call_data_copy(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let dst_offset = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [dst_offset, offset, size] = ctx.stack.pop_n::<3>();
 
     let copy_size = min(
         u256::u256_to_usize(size),
@@ -488,9 +460,7 @@ pub fn code_copy(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let dst_offset = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [dst_offset, offset, size] = ctx.stack.pop_n::<3>();
     let copy_size = min(
         u256::u256_to_usize(size),
         ctx.code.len() - u256::u256_to_usize(offset),
@@ -537,10 +507,7 @@ pub fn ext_code_copy(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let address = ctx.stack.pop();
-    let dst_offset = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [address, dst_offset, offset, size] = ctx.stack.pop_n::<4>();
 
     let code = state.get_code(u256::u256_to_address(address));
     let copy_size = min(u256::u256_to_usize(size), code.len());
@@ -574,9 +541,7 @@ pub fn return_data_copy(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let dst_offset = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [dst_offset, offset, size] = ctx.stack.pop_n::<3>();
 
     let copy_size = min(
         u256::u256_to_usize(size),
@@ -615,8 +580,7 @@ pub fn block_hash(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let block_number = ctx.stack.pop();
-    // TODO implement block hash
-    ctx.stack.push(U256::ZERO);
+    ctx.stack.push(blk_ctx.get_block_hash(block_number));
     Ok(())
 }
 
@@ -697,8 +661,7 @@ pub fn blob_hash(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    // TODO implement blobhash
-    ctx.stack.push(U256::ZERO);
+    ctx.stack.push(blk_ctx.blob_hash);
     Ok(())
 }
 
@@ -736,8 +699,7 @@ pub fn mstore(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let value = ctx.stack.pop();
+    let [offset, value] = ctx.stack.pop_n::<2>();
     ctx.memory.write32(u256::u256_to_usize(offset), value);
     Ok(())
 }
@@ -747,8 +709,7 @@ pub fn mstore8(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let value = ctx.stack.pop();
+    let [offset, value] = ctx.stack.pop_n::<2>();
     ctx.memory
         .write8(u256::u256_to_usize(offset), value.as_limbs()[0] as u8);
     Ok(())
@@ -769,8 +730,7 @@ pub fn sstore(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let key = ctx.stack.pop();
-    let value = ctx.stack.pop();
+    let [key, value] = ctx.stack.pop_n::<2>();
     state.set_state(ctx.contract, key, value);
     Ok(())
 }
@@ -794,8 +754,7 @@ pub fn jumpi(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let counter = ctx.stack.pop();
-    let condition = ctx.stack.pop();
+    let [counter, condition] = ctx.stack.pop_n::<2>();
     if !condition.is_zero() {
         ctx.pc = u256::u256_to_usize(counter);
     }
@@ -816,8 +775,7 @@ pub fn msize(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    // TODO implement msize
-    ctx.stack.push(U256::ZERO);
+    ctx.stack.push(U256::from(ctx.memory.len()));
     Ok(())
 }
 
@@ -845,9 +803,9 @@ pub fn tload(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    // TODO implement tload
     let key = ctx.stack.pop();
-    ctx.stack.push(U256::ZERO);
+    ctx.stack
+        .push(state.get_transition_state(ctx.contract, key));
     Ok(())
 }
 
@@ -856,10 +814,8 @@ pub fn tstore(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    // TODO implement tstore
-    let key = ctx.stack.pop();
-    let value = ctx.stack.pop();
-    ctx.stack.push(U256::ZERO);
+    let [key, value] = ctx.stack.pop_n::<2>();
+    state.set_transition_state(ctx.contract, key, value);
     Ok(())
 }
 
@@ -868,9 +824,7 @@ pub fn mcopy(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let dst_offset = ctx.stack.pop();
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [dst_offset, offset, size] = ctx.stack.pop_n::<3>();
     ctx.memory.copy(
         u256::u256_to_usize(dst_offset),
         u256::u256_to_usize(offset),
@@ -921,8 +875,7 @@ pub fn log<const N: usize>(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [offset, size] = ctx.stack.pop_n::<2>();
     let mut topics = Vec::new();
     for _ in 0..N {
         topics.push(ctx.stack.pop());
@@ -932,7 +885,7 @@ pub fn log<const N: usize>(
         .memory
         .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
 
-    // TODO log
+    state.add_log(ctx.contract, topics, data);
     Ok(())
 }
 
@@ -941,8 +894,7 @@ pub fn ret(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [offset, size] = ctx.stack.pop_n::<2>();
     ctx.return_data = ctx
         .memory
         .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));
@@ -954,8 +906,7 @@ pub fn revert(
     state: &mut Box<dyn StateDB>,
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
-    let offset = ctx.stack.pop();
-    let size = ctx.stack.pop();
+    let [offset, size] = ctx.stack.pop_n::<2>();
     let err_data = ctx
         .memory
         .read(u256::u256_to_usize(offset), u256::u256_to_usize(size));

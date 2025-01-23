@@ -16,6 +16,19 @@ pub struct Interpreter<'a> {
     blk_ctx: &'a BlockContext,
 }
 
+macro_rules! stack_pop {
+    ($ctx:ident, $count:expr) => {{
+        // 创建一个向量用于存储弹出的值
+        let mut values: Vec<_> = (0..$count).map(|_| $ctx.stack.pop()).collect();
+        // 将值转化为固定大小的数组，并返回
+        // 注意：这里假设我们有足够的弹出值
+        let result: [_; $count] = values
+            .try_into()
+            .expect("Expected the correct number of elements");
+        result
+    }};
+}
+
 impl<'a> Interpreter<'a> {
     pub fn new(state: Box<dyn StateDB>, blk_ctx: &'a BlockContext) -> Self {
         Self { state, blk_ctx }
@@ -93,8 +106,6 @@ impl<'a> Interpreter<'a> {
         ctx.value = value;
         ctx.caller = from;
         ctx.origin = origin;
-        ctx.pc = 0;
-        ctx.depth = 0;
 
         self.run_with_ctx(&mut ctx)?;
         ctx.stack.print_stack();
@@ -103,14 +114,7 @@ impl<'a> Interpreter<'a> {
 
     fn call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let gas = ctx.stack.pop();
-
-        let to = ctx.stack.pop();
-        let value = ctx.stack.pop();
-        let args_offset = ctx.stack.pop();
-        let args_size = ctx.stack.pop();
-        let ret_offset = ctx.stack.pop();
-        let ret_size = ctx.stack.pop();
+        let [gas, to, value, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<7>();
 
         let call_data = ctx
             .memory
@@ -122,7 +126,6 @@ impl<'a> Interpreter<'a> {
         new_ctx.call_data = call_data;
         new_ctx.value = value;
         new_ctx.caller = ctx.origin;
-        new_ctx.pc = 0;
         new_ctx.depth = ctx.depth + 1;
 
         if !value.is_zero() {
@@ -164,13 +167,7 @@ impl<'a> Interpreter<'a> {
 
     fn delegate_call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let gas = ctx.stack.pop();
-
-        let to = ctx.stack.pop();
-        let args_offset = ctx.stack.pop();
-        let args_size = ctx.stack.pop();
-        let ret_offset = ctx.stack.pop();
-        let ret_size = ctx.stack.pop();
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
 
         let call_data = ctx
             .memory
@@ -181,9 +178,7 @@ impl<'a> Interpreter<'a> {
         new_ctx.contract = ctx.contract;
         new_ctx.code = self.state.get_code(u256_to_address(to));
         new_ctx.call_data = call_data;
-        new_ctx.value = U256::ZERO;
         new_ctx.caller = ctx.caller;
-        new_ctx.pc = 0;
         new_ctx.depth = ctx.depth + 1;
 
         // prepare state for transaction
@@ -212,13 +207,7 @@ impl<'a> Interpreter<'a> {
 
     fn call_code(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
         // TODO 往后处理gas
-        let gas = ctx.stack.pop();
-
-        let to = u256_to_address(ctx.stack.pop());
-        let args_offset = ctx.stack.pop();
-        let args_size = ctx.stack.pop();
-        let ret_offset = ctx.stack.pop();
-        let ret_size = ctx.stack.pop();
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
 
         let call_data = ctx
             .memory
@@ -227,11 +216,9 @@ impl<'a> Interpreter<'a> {
         let mut new_ctx = Context::new();
 
         new_ctx.contract = ctx.contract;
-        new_ctx.code = self.state.get_code(to);
+        new_ctx.caller = u256_to_address(to);
+        new_ctx.code = self.state.get_code(new_ctx.caller);
         new_ctx.call_data = call_data;
-        new_ctx.value = U256::ZERO;
-        new_ctx.caller = to;
-        new_ctx.pc = 0;
         new_ctx.depth = ctx.depth + 1;
 
         // prepare state for transaction
@@ -259,12 +246,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn static_call(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
-        let gas = ctx.stack.pop();
-        let to = ctx.stack.pop();
-        let args_offset = ctx.stack.pop();
-        let args_size = ctx.stack.pop();
-        let ret_offset = ctx.stack.pop();
-        let ret_size = ctx.stack.pop();
+        let [gas, to, args_offset, args_size, ret_offset, ret_size] = ctx.stack.pop_n::<6>();
 
         let call_data = ctx
             .memory
@@ -274,9 +256,7 @@ impl<'a> Interpreter<'a> {
         new_ctx.contract = u256_to_address(to);
         new_ctx.code = self.state.get_code(new_ctx.contract);
         new_ctx.call_data = call_data;
-        new_ctx.value = U256::ZERO;
         new_ctx.caller = ctx.origin;
-        new_ctx.pc = 0;
         new_ctx.depth = ctx.depth + 1;
 
         // prepare state for transaction
@@ -301,9 +281,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn create(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
-        let value = ctx.stack.pop();
-        let offset = ctx.stack.pop();
-        let size = ctx.stack.pop();
+        let [value, offset, size] = ctx.stack.pop_n::<3>();
         let code = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
 
         let contract_address = ctx.caller.create(self.state.get_nonce(ctx.caller));
@@ -319,10 +297,7 @@ impl<'a> Interpreter<'a> {
     }
 
     fn create2(&mut self, ctx: &mut Context) -> Result<(), EVMError> {
-        let value = ctx.stack.pop();
-        let offset = ctx.stack.pop();
-        let size = ctx.stack.pop();
-        let salt = ctx.stack.pop();
+        let [value, offset, size, salt] = ctx.stack.pop_n::<4>();
 
         let code = ctx.memory.read(u256_to_usize(offset), u256_to_usize(size));
         let code_hash = keccak256(&code);
@@ -347,10 +322,7 @@ impl<'a> Interpreter<'a> {
         let mut new_ctx = Context::new();
         new_ctx.contract = contract_address;
         new_ctx.code = code;
-        new_ctx.call_data = vec![];
-        new_ctx.value = U256::ZERO;
         new_ctx.caller = ctx.caller;
-        new_ctx.pc = 0;
         new_ctx.depth = ctx.depth + 1;
 
         self.run_with_ctx(&mut new_ctx)?;

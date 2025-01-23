@@ -45,7 +45,7 @@ fn main() {
 
     let mut state = InMemoryStateDB::new();
     let caller = Address::ZERO;
-    state.create_account(caller);
+    state.create_object(caller);
     let contract_address = state.create_contract(caller, code);
     let blk_ctx = BlockContext::new();
     let mut vm = Interpreter::new(Box::new(state), &blk_ctx);
