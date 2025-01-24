@@ -7,25 +7,12 @@ use crate::error::EVMError;
 pub trait StateDB {
     // account
     fn create_object(&mut self, address: Address);
-    fn create_contract(
-        &mut self,
-        caller: Address,
-        code: Vec<u8>,
-    ) -> Address;
+    fn create_contract(&mut self, caller: Address, code: Vec<u8>) -> Address;
     fn set_code(&mut self, cotnract: Address, code: Vec<u8>);
 
     // balance
-    fn transfer(
-        &mut self,
-        from: Address,
-        to: Address,
-        value: U256,
-    ) -> Result<(), EVMError>;
-    fn sub_balance(
-        &mut self,
-        address: Address,
-        value: U256,
-    ) -> Result<U256, EVMError>;
+    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError>;
+    fn sub_balance(&mut self, address: Address, value: U256) -> Result<U256, EVMError>;
     fn add_balance(&mut self, address: Address, value: U256) -> U256;
     fn get_balance(&self, address: Address) -> U256;
 
@@ -41,36 +28,17 @@ pub trait StateDB {
 
     // storage
     fn get_state(&self, address: Address, slot: U256) -> U256;
-    fn set_state(
-        &mut self,
-        address: Address,
-        slot: U256,
-        value: U256,
-    );
+    fn set_state(&mut self, address: Address, slot: U256, value: U256);
 
-    fn get_transition_state(
-        &self,
-        address: Address,
-        slot: U256,
-    ) -> U256;
-    fn set_transition_state(
-        &mut self,
-        address: Address,
-        slot: U256,
-        value: U256,
-    );
+    fn get_transition_state(&self, address: Address, slot: U256) -> U256;
+    fn set_transition_state(&mut self, address: Address, slot: U256, value: U256);
 
     // state transaction
     fn prepare(&mut self);
     fn commit(&mut self);
 
     // log
-    fn add_log(
-        &mut self,
-        address: Address,
-        topics: Vec<U256>,
-        data: Vec<u8>,
-    );
+    fn add_log(&mut self, address: Address, topics: Vec<U256>, data: Vec<u8>);
 }
 
 pub struct InMemoryStateDB {
@@ -104,53 +72,35 @@ impl InMemoryStateDB {
         }
     }
 
-    fn get_object_mut(
-        &mut self,
-        address: &Address,
-    ) -> Option<&mut StateObject> {
+    fn get_object_mut(&mut self, address: &Address) -> Option<&mut StateObject> {
         match self.dirty_objects.get_mut(address) {
             Some(account) => Some(account),
             None => self.objects.get_mut(address),
         }
     }
 
-    fn get_object_mut_or_create(
-        &mut self,
-        address: &Address,
-    ) -> &mut StateObject {
+    fn get_object_mut_or_create(&mut self, address: &Address) -> &mut StateObject {
         match self.get_object(address) {
             Some(account) => self.get_object_mut(address).unwrap(),
             None => {
-                let account =
-                    StateObject::new_with_address(address.clone());
+                let account = StateObject::new_with_address(address.clone());
                 self.set_account(address.clone(), account);
                 self.get_object_mut(address).unwrap()
             }
         }
     }
 
-    fn set_account(
-        &mut self,
-        address: Address,
-        account: StateObject,
-    ) {
+    fn set_account(&mut self, address: Address, account: StateObject) {
         self.dirty_objects.insert(address, account);
     }
 }
 
 impl StateDB for InMemoryStateDB {
     fn create_object(&mut self, address: Address) {
-        self.set_account(
-            address,
-            StateObject::new_with_address(address),
-        );
+        self.set_account(address, StateObject::new_with_address(address));
     }
 
-    fn create_contract(
-        &mut self,
-        caller: Address,
-        code: Vec<u8>,
-    ) -> Address {
+    fn create_contract(&mut self, caller: Address, code: Vec<u8>) -> Address {
         let account = self.get_object(&caller).unwrap();
         let nonce = account.nonce;
         let contract_address = caller.create(nonce);
@@ -170,30 +120,18 @@ impl StateDB for InMemoryStateDB {
                 account.code = code;
             }
             None => {
-                self.set_account(
-                    cotnract,
-                    StateObject::new_with_code(cotnract, code),
-                );
+                self.set_account(cotnract, StateObject::new_with_code(cotnract, code));
             }
         }
     }
 
-    fn transfer(
-        &mut self,
-        from: Address,
-        to: Address,
-        value: U256,
-    ) -> Result<(), EVMError> {
+    fn transfer(&mut self, from: Address, to: Address, value: U256) -> Result<(), EVMError> {
         self.sub_balance(from, value)?;
         self.add_balance(to, value);
         Ok(())
     }
 
-    fn sub_balance(
-        &mut self,
-        address: Address,
-        value: U256,
-    ) -> Result<U256, EVMError> {
+    fn sub_balance(&mut self, address: Address, value: U256) -> Result<U256, EVMError> {
         match self.get_object_mut(&address) {
             Some(account) => {
                 let balance = account.balance;
@@ -273,12 +211,7 @@ impl StateDB for InMemoryStateDB {
         }
     }
 
-    fn set_state(
-        &mut self,
-        address: Address,
-        slot: U256,
-        value: U256,
-    ) {
+    fn set_state(&mut self, address: Address, slot: U256, value: U256) {
         self.dirty_storage.insert((address, slot), value);
     }
 
@@ -294,41 +227,25 @@ impl StateDB for InMemoryStateDB {
         }
         self.dirty_storage.clear();
         for (address, account) in self.dirty_objects.iter() {
-            self.objects
-                .insert(address.clone(), account.clone());
+            self.objects.insert(address.clone(), account.clone());
         }
         self.dirty_objects.clear();
         self.transition_storage.clear();
     }
 
-    fn add_log(
-        &mut self,
-        address: Address,
-        topics: Vec<U256>,
-        data: Vec<u8>,
-    ) {
+    fn add_log(&mut self, address: Address, topics: Vec<U256>, data: Vec<u8>) {
         self.logs.push((address, topics, data));
     }
 
-    fn get_transition_state(
-        &self,
-        address: Address,
-        slot: U256,
-    ) -> U256 {
+    fn get_transition_state(&self, address: Address, slot: U256) -> U256 {
         match self.transition_storage.get(&(address, slot)) {
             Some(value) => value.clone(),
             None => U256::ZERO,
         }
     }
 
-    fn set_transition_state(
-        &mut self,
-        address: Address,
-        slot: U256,
-        value: U256,
-    ) {
-        self.transition_storage
-            .insert((address, slot), value);
+    fn set_transition_state(&mut self, address: Address, slot: U256, value: U256) {
+        self.transition_storage.insert((address, slot), value);
     }
 }
 

@@ -1,9 +1,7 @@
 use alloy_primitives::U256;
 use core::cmp::Ordering;
 
-#[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash,
-)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i8)]
 pub enum Sign {
     // Same as `cmp::Ordering`
@@ -142,10 +140,7 @@ mod tests {
     fn div_i256() {
         // Sanity checks based on i8. Notice that we need to use `Wrapping` here because
         // Rust will prevent the overflow by default whereas the EVM does not.
-        assert_eq!(
-            Wrapping(i8::MIN) / Wrapping(-1),
-            Wrapping(i8::MIN)
-        );
+        assert_eq!(Wrapping(i8::MIN) / Wrapping(-1), Wrapping(i8::MIN));
         assert_eq!(i8::MAX / -1, -i8::MAX);
 
         uint! {

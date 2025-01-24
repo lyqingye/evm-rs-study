@@ -401,8 +401,7 @@ pub fn call_data_load(
     }
     let offset = ctx.stack.pop();
     let mut loaded = [0u8; 32];
-    let start_offset =
-        min(u256::u256_to_usize(offset), ctx.call_data.len() - 1);
+    let start_offset = min(u256::u256_to_usize(offset), ctx.call_data.len() - 1);
     let copy_size = min(32usize, ctx.call_data.len() - start_offset);
     for i in 0..copy_size {
         loaded[i] = ctx.call_data[start_offset + i];
@@ -570,11 +569,8 @@ pub fn ext_code_hash(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let address = ctx.stack.pop();
-    ctx.stack.push(
-        state
-            .get_code_hash(u256::u256_to_address(address))
-            .into(),
-    );
+    ctx.stack
+        .push(state.get_code_hash(u256::u256_to_address(address)).into());
     Ok(())
 }
 
@@ -584,8 +580,7 @@ pub fn block_hash(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let block_number = ctx.stack.pop();
-    ctx.stack
-        .push(blk_ctx.get_block_hash(block_number));
+    ctx.stack.push(blk_ctx.get_block_hash(block_number));
     Ok(())
 }
 
@@ -705,8 +700,7 @@ pub fn mstore(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let [offset, value] = ctx.stack.pop_n::<2>();
-    ctx.memory
-        .write32(u256::u256_to_usize(offset), value);
+    ctx.memory.write32(u256::u256_to_usize(offset), value);
     Ok(())
 }
 
@@ -716,10 +710,8 @@ pub fn mstore8(
     blk_ctx: &BlockContext,
 ) -> Result<(), EVMError> {
     let [offset, value] = ctx.stack.pop_n::<2>();
-    ctx.memory.write8(
-        u256::u256_to_usize(offset),
-        value.as_limbs()[0] as u8,
-    );
+    ctx.memory
+        .write8(u256::u256_to_usize(offset), value.as_limbs()[0] as u8);
     Ok(())
 }
 
